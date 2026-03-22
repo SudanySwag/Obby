@@ -3,8 +3,8 @@ const { fetchGitHubFile, fetchGitHubFolder, generateWithAI, announceOnAlexa } = 
 module.exports = async function handler(req, res) {
   try {
     const [mainFile, currentProjects] = await Promise.all([
-      fetchGitHubFile("main.md"),
-      fetchGitHubFolder("project/current"),
+      fetchGitHubFile("MAIN.md"),
+      fetchGitHubFolder("Projects/In Progress"),
     ]);
     const projectSummaries = currentProjects.map((f) => `### ${f.name}\n${f.content}`).join("\n\n");
     const notesContent = `## Daily Notes (main)\n${mainFile || "No daily notes found."}\n\n## Current Projects\n${projectSummaries || "No current projects found."}`;
