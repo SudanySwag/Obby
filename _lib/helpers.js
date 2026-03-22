@@ -1,17 +1,12 @@
-const Anthropic = require("@anthropic-ai/sdk");
- 
 const GITHUB_PAT = process.env.GITHUB_PAT;
 const VOICEMONKEY_TOKEN = process.env.VOICEMONKEY_TOKEN;
 const VOICEMONKEY_DEVICE = process.env.VOICEMONKEY_DEVICE || "bedroom";
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
  
 async function fetchGitHubFile(path) {
   const url = `https://api.github.com/repos/SudanySwag/Notes/contents/${encodeURIComponent(path)}`;
   const res = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${GITHUB_PAT}`,
-      Accept: "application/vnd.github.v3+json",
-    },
+    headers: { Authorization: `Bearer ${GITHUB_PAT}`, Accept: "application/vnd.github.v3+json" },
   });
   if (!res.ok) return null;
   const data = await res.json();
@@ -21,56 +16,47 @@ async function fetchGitHubFile(path) {
 async function fetchGitHubFolder(path) {
   const url = `https://api.github.com/repos/SudanySwag/Notes/contents/${encodeURIComponent(path)}`;
   const res = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${GITHUB_PAT}`,
-      Accept: "application/vnd.github.v3+json",
-    },
+    headers: { Authorization: `Bearer ${GITHUB_PAT}`, Accept: "application/vnd.github.v3+json" },
   });
   if (!res.ok) return [];
   const items = await res.json();
   if (!Array.isArray(items)) return [];
- 
   const files = [];
   for (const item of items) {
     if (item.type === "file" && (item.name.endsWith(".md") || item.name.endsWith(".txt"))) {
       const content = await fetchGitHubFile(item.path);
-      if (content) {
-        files.push({ name: item.name, path: item.path, content });
-      }
+      if (content) files.push({ name: item.name, path: item.path, content });
     }
   }
   return files;
 }
  
-async function generateWithClaude(systemPrompt, userContent) {
-  const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
-  const message = await client.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 1024,
-    system: systemPrompt,
-    messages: [{ role: "user", content: userContent }],
-  });
-  return message.content[0].text;
-}
- 
-async function announceOnAlexa(text) {
-  const url = `https://api-v2.voicemonkey.io/announcement`;
+async function generateWithAI(systemPrompt, userContent) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      token: VOICEMONKEY_TOKEN,
-      device: VOICEMONKEY_DEVICE,
-      text: text,
+      system_instruction: { parts: [{ text: systemPrompt }] },
+      contents: [{ parts: [{ text: userContent }] }],
+      generationConfig: { maxOutputTokens: 1024 },
     }),
   });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Gemini API error: ${res.status} ${err}`);
+  }
   const data = await res.json();
-  return data;
+  return data.candidates[0].content.parts[0].text;
 }
  
-module.exports = {
-  fetchGitHubFile,
-  fetchGitHubFolder,
-  generateWithClaude,
-  announceOnAlexa,
-};
+async function announceOnAlexa(text) {
+  const res = await fetch("https://api-v2.voicemonkey.io/announcement", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token: VOICEMONKEY_TOKEN, device: VOICEMONKEY_DEVICE, text }),
+  });
+  return await res.json();
+}
+ 
+module.exports = { fetchGitHubFile, fetchGitHubFolder, generateWithAI, announceOnAlexa };
