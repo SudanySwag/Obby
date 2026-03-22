@@ -4,7 +4,7 @@ const VOICEMONKEY_DEVICE = process.env.VOICEMONKEY_DEVICE || "bedroom";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
  
 async function fetchGitHubFile(path) {
-  const url = `https://api.github.com/repos/SudanySwag/Notes/contents/${encodeURIComponent(path)}`;
+  const url = `https://api.github.com/repos/SudanySwag/Notes/contents/${path.split('/').map(encodeURIComponent).join('/')}`;
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${GITHUB_PAT}`, Accept: "application/vnd.github.v3+json" },
   });
@@ -14,7 +14,7 @@ async function fetchGitHubFile(path) {
 }
  
 async function fetchGitHubFolder(path) {
-  const url = `https://api.github.com/repos/SudanySwag/Notes/contents/${encodeURIComponent(path)}`;
+  const url = `https://api.github.com/repos/SudanySwag/Notes/contents/${path.split('/').map(encodeURIComponent).join('/')}`;
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${GITHUB_PAT}`, Accept: "application/vnd.github.v3+json" },
   });
