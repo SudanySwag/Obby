@@ -5,7 +5,7 @@ function encodePath(path) {
 }
  
 async function listGitHubContents(path) {
-  const url = `https://api.github.com/repos/SudanySwag/Notes/contents/${encodePath(path)}`;
+  const url = `https://api.github.com/repos/SudanySwag/Notes/${encodePath(path)}`;
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${GITHUB_PAT}`, Accept: "application/vnd.github.v3+json" },
   });

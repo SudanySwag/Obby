@@ -26,6 +26,10 @@ async function fetchGitHubFolder(path) {
     if (item.type === "file" && (item.name.endsWith(".md") || item.name.endsWith(".txt"))) {
       const content = await fetchGitHubFile(item.path);
       if (content) files.push({ name: item.name, path: item.path, content });
+    } else if (item.type === "dir") {
+      // Recursively fetch files from subdirectories
+      const subFiles = await fetchGitHubFolder(item.path);
+      files.push(...subFiles);
     }
   }
   return files;
@@ -58,5 +62,37 @@ async function announceOnAlexa(text) {
   });
   return await res.json();
 }
+
+async function fetchWorkoutOfTheDay() {
+  try {
+    const res = await fetch("https://www.hybridcalisthenics.com/wotd");
+    if (!res.ok) return "Unable to fetch today's workout.";
+    const html = await res.text();
+
+    // Extract workout exercises from the HTML
+    const workoutRegex = /# \w+day[\s\S]*?(?=#{1,2} |$)/gi;
+    const matches = html.match(workoutRegex);
+
+    if (!matches) return "No workout found for today.";
+
+    // Parse the workout section
+    const workoutText = matches[0];
+    const exercises = [];
+
+    // Extract exercise names and sets
+    const exerciseRegex = /([A-Z][a-zA-Z\s]+)\s*\((\d+-\d+\s+Sets)\)/g;
+    let match;
+    while ((match = exerciseRegex.exec(workoutText)) !== null) {
+      exercises.push(`${match[1]}: ${match[2]}`);
+    }
+
+    if (exercises.length === 0) return "No exercises found for today's workout.";
+
+    return `Today's workout: ${exercises.join(", ")}.`;
+  } catch (error) {
+    console.error("Error fetching workout:", error);
+    return "Unable to fetch today's workout.";
+  }
+}
  
-module.exports = { fetchGitHubFile, fetchGitHubFolder, generateWithAI, announceOnAlexa };
+module.exports = { fetchGitHubFile, fetchGitHubFolder, generateWithAI, announceOnAlexa, fetchWorkoutOfTheDay };
