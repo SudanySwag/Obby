@@ -68,16 +68,18 @@ async function fetchWorkoutOfTheDay() {
     const res = await fetch("https://www.hybridcalisthenics.com/wotd");
     if (!res.ok) return "Unable to fetch today's workout.";
     const html = await res.text();
+    // Strip HTML tags to get plain text for parsing
+    const text = html.replace(/<[^>]+>/g, "\n").replace(/\n{2,}/g, "\n");
 
     const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const today = days[new Date().getDay()];
 
     // Split page into day sections and find today's
     const daySectionRegex = new RegExp(
-      `(?:^|\\n)#{1,3}\\s*${today}[\\s\\S]*?(?=\\n#{1,3}\\s*(?:${days.join("|")})|$)`,
+      `(?:^|\\n)\\s*${today}\\s*\\n[\\s\\S]*?(?=\\n\\s*(?:${days.join("|")})\\s*\\n|$)`,
       "i"
     );
-    const section = html.match(daySectionRegex);
+    const section = text.match(daySectionRegex);
     if (!section) return `No workout found for ${today}.`;
 
     const sectionText = section[0];
@@ -89,18 +91,18 @@ async function fetchWorkoutOfTheDay() {
 
     // Extract main exercises with sets
     const exercises = [];
-    const exerciseRegex = /([A-Za-z\s-]+?)\s*\((\d+-\d+\s+Sets)\)/g;
+    const exerciseRegex = /([A-Za-z][A-Za-z -]*?)\s*\((\d+-\d+\s+Sets)\)/g;
     let match;
     while ((match = exerciseRegex.exec(sectionText)) !== null) {
       exercises.push({ name: match[1].trim(), sets: match[2] });
     }
 
-    // Extract bonus/supplemental exercises from "Want to do more?" sections
-    const bonusMatch = sectionText.match(/want to do more\?[\s\S]*?(?=\n#{1,3}\s|\n---|\n\*\*|$)/i);
+    // Extract bonus/supplemental exercises from "Want to do more?" in the raw HTML
+    const bonusHtmlMatch = html.match(/want to do more\?[\s\S]*?(?=<h[1-3]|<\/section|$)/i);
     let bonusExercises = [];
-    if (bonusMatch) {
-      const bonusLinks = [...bonusMatch[0].matchAll(/\[([^\]]+)\]\([^)]+\)/g)];
-      bonusExercises = bonusLinks.map((m) => m[1]).filter((name) => name.length > 1);
+    if (bonusHtmlMatch) {
+      const bonusLinks = [...bonusHtmlMatch[0].matchAll(/<a[^>]+>([^<]+)<\/a>/g)];
+      bonusExercises = bonusLinks.map((m) => m[1].trim()).filter((name) => name.length > 1);
     }
 
     let result = `${today}'s workout:\n`;
