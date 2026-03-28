@@ -43,7 +43,7 @@ async function generateWithAI(systemPrompt, userContent) {
     body: JSON.stringify({
       system_instruction: { parts: [{ text: systemPrompt }] },
       contents: [{ parts: [{ text: userContent }] }],
-      generationConfig: { maxOutputTokens: 1024 },
+      generationConfig: { maxOutputTokens: 2048 },
     }),
   });
   if (!res.ok) {
